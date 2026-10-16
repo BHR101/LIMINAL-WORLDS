@@ -217,6 +217,7 @@ export class Engine {
     this.ui?.showTitle(false);
     this.ui?.showPause(false);
     this.cinematicMode = false;
+    this.cineFrozen = false;
     this.ui?.setCinematicBadge(false);
     const seed = opts.seed ?? (id === 'random' ? randomSeed() : 0);
     const sameWorld = this.world && this.worldDef?.id === id && seed === this.worldSeed && fromMenu;
@@ -263,6 +264,25 @@ export class Engine {
     this.startPlaying();
     this.player.applyToCamera(this.camera);
   }
+
+  /** Capture/automation hook: hold the camera at a point along a world's cinematic shot. */
+  debugCinematic(id: string, index: number, t01: number, seed = 0): void {
+    if (this.worldDef?.id !== id || seed !== this.worldSeed) this.loadWorld(id, seed);
+    this.ui?.showTitle(false);
+    this.ui?.showPause(false);
+    this.ui?.setHudVisible(false);
+    this.mode = 'menu';
+    this.titleFog = 0;
+    this.glide = null;
+    this.fadeAmount = 0;
+    this.cinematicMode = false;
+    const shots = this.world!.cinematic;
+    this.cine.setShots(shots);
+    this.cine.seek(index, t01 * shots[index % shots.length].duration);
+    this.cineFrozen = true;
+  }
+
+  private cineFrozen = false;
 
   private startPlaying(): void {
     this.mode = 'playing';
@@ -730,7 +750,7 @@ export class Engine {
     }
 
     let fade = this.fadeAmount;
-    if ((this.mode === 'menu' || this.cinematicMode) && !this.glide) fade = Math.max(fade, this.cine.fade * 0.85);
+    if ((this.mode === 'menu' || this.cinematicMode) && !this.glide && !this.cineFrozen) fade = Math.max(fade, this.cine.fade * 0.85);
     if (this.scripted) fade = Math.max(fade, 0);
     this.post.uniforms.uFade.value = fade;
     this.post.uniforms.uFadeColor.value.copy(this.fadeAmount > 0 ? this.fadeColor : new THREE.Color(0x000000));
@@ -763,7 +783,7 @@ export class Engine {
       return;
     }
     if (this.mode === 'menu' || this.cinematicMode) {
-      this.cine.update(realDt, cam);
+      this.cine.update(this.cineFrozen && this.mode === 'menu' ? 0 : realDt, cam);
       return;
     }
     if (this.scripted) {

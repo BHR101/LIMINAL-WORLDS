@@ -178,12 +178,13 @@ export const InfiniteAscent: WorldDefinition = {
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
       const y = 70 + (i % 3) * 25;
-      b.box(x, y, z, 40, 3, 14, 'stone', { rotY: -a, collide: false });
+      // An upside-down aqueduct: a deck with arches hanging beneath it.
+      b.box(x, y, z, 15, 4, 66, 'stone', { rotY: -a + Math.PI / 2, collide: false });
       const q = new THREE.Quaternion().setFromAxisAngle(v3(0, 1, 0), -a + Math.PI / 2).multiply(flip);
-      for (let k = -1; k <= 1; k++) {
-        const ox = Math.cos(a + Math.PI / 2) * k * 12;
-        const oz = Math.sin(a + Math.PI / 2) * k * 12;
-        arch(b, { x: x + ox, z: z + oz, y0: y, span: 6, legHeight: 8, pier: 1.6, depth: 2, mat: 'white', quaternion: q, collide: false });
+      for (let k = -2; k <= 2; k++) {
+        const ox = Math.cos(a + Math.PI / 2) * k * 13;
+        const oz = Math.sin(a + Math.PI / 2) * k * 13;
+        arch(b, { x: x + ox, z: z + oz, y0: y, span: 9, legHeight: 12, pier: 4, depth: 5, crown: 3, mat: 'white', quaternion: q, collide: false });
       }
     }
 
@@ -234,18 +235,24 @@ export const InfiniteAscent: WorldDefinition = {
     // --- The inverted district --------------------------------------------------
     platform(b, { x: INV.x, y: 0, z: INV.z, width: 30, depth: 30, mat: 'stone', keel: 26, edgeMat: 'gold' });
     parapets(b, INV.x, 0, INV.z, 30, ['n', 's'], 'white', 4);
-    b.box(INV.x, 110, INV.z, 420, 6, 420, 'stone', { collide: false, castShadow: false });
+    b.box(INV.x, 80, INV.z, 420, 6, 420, 'stone', { collide: false, castShadow: false });
+    // An avenue of hanging towers on the axis, framed by the high arch.
+    for (let k = 0; k < 8; k++) {
+      for (const sx of [-1, 1]) {
+        hangingTower(b, { x: INV.x + sx * rng.range(14, 22), z: INV.z - 40 - k * 24, ceilingY: 80, width: rng.range(9, 14), height: rng.range(28, 52), tiers: 3, mat: k % 2 ? 'white' : 'blue', windowMat: 'gold' });
+      }
+    }
     for (let i = 0; i < 46; i++) {
       const x = INV.x + rng.range(-190, 190);
       const z = INV.z + rng.range(-190, 190);
-      if (Math.abs(x - INV.x) < 26 && Math.abs(z - INV.z) < 26) continue;
-      hangingTower(b, { x, z, ceilingY: 110, width: rng.range(8, 22), height: rng.range(30, 85), tiers: rng.int(2, 4), mat: rng.chance(0.3) ? 'blue' : 'white', windowMat: 'gold', rotY: rng.chance(0.3) ? rng.range(0, 1) : 0 });
+      if (Math.abs(x - INV.x) < 30 && z - INV.z < 30) continue;
+      hangingTower(b, { x, z, ceilingY: 80, width: rng.range(8, 22), height: rng.range(24, 60), tiers: rng.int(2, 4), mat: rng.chance(0.3) ? 'blue' : 'white', windowMat: 'gold', rotY: rng.chance(0.3) ? rng.range(0, 1) : 0 });
     }
-    for (let i = -3; i <= 3; i++) arch(b, { x: INV.x + i * 16, z: INV.z - 60, y0: 110, span: 10, legHeight: 14, pier: 2.4, depth: 3, mat: 'white', quaternion: flip.clone(), collide: false });
-    staircase(b, { x: INV.x + 30, z: INV.z + 30, y0: 104, facing: 3, width: 4, steps: 40, mat: 'white', slab: 0.4 }); // decorative, on the ceiling
+    for (let i = -3; i <= 3; i++) arch(b, { x: INV.x + i * 16, z: INV.z - 240, y0: 80, span: 10, legHeight: 14, pier: 2.4, depth: 3, mat: 'white', quaternion: flip.clone(), collide: false });
+    staircase(b, { x: INV.x + 30, z: INV.z + 30, y0: 74, facing: 3, width: 4, steps: 40, mat: 'white', slab: 0.4 }); // decorative, on the ceiling
     sculpture(b, { position: v3(INV.x, 40, INV.z - 30), size: 5, kind: 'nested', mat: 'gold', innerMat: 'glow', float: 2 });
     ring(b, { center: v3(INV.x, 60, INV.z), radius: 30, thickness: 1, mat: 'gold', spin: 0.04, spinAxis: v3(0, 1, 0), rotation: new THREE.Euler(Math.PI / 2, 0, 0) });
-    arch(b, { x: INV.x, z: INV.z - 15.6, y0: 0, span: 2.8, legHeight: 3.2, pier: 1, depth: 1, crown: 0.8, mat: 'gold' });
+    arch(b, { x: INV.x + 10, z: INV.z - 13.6, y0: 0, span: 2.8, legHeight: 3.2, pier: 1, depth: 1, crown: 0.8, mat: 'gold' });
 
     addDust(kit, 0xffffff, 0.5, 0.04, 0.35);
 
@@ -274,7 +281,7 @@ export const InfiniteAscent: WorldDefinition = {
       },
       {
         id: 'inverted-return',
-        position: v3(INV.x, 1.6, INV.z - 15.3),
+        position: v3(INV.x + 10, 1.6, INV.z - 13.3),
         rotY: 0,
         width: 2.8,
         height: 3.2,

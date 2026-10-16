@@ -141,7 +141,8 @@ export const LastHorizon: WorldDefinition = {
 
     // --- The megastructure, hidden beneath the clouds until the reveal --------------
     const mega = new THREE.Group();
-    const megaB = { z: -2600 };
+    // Placed so that, from the platform, the setting sun sits inside its ring.
+    const megaB = { z: -1500, x: 84, y: -219 };
     const span = 1400;
     const legs = 260;
     const megaArch = new THREE.Mesh(
@@ -162,7 +163,7 @@ export const LastHorizon: WorldDefinition = {
         g.translate(0, 0, -80);
         return g;
       }),
-      b.mat('dusk'),
+      b.mat('far'),
     );
     mega.add(megaArch);
     const megaRing = new THREE.Mesh(b.geometry('mega-ring', () => new THREE.TorusGeometry(380, 22, 4, 180)), b.mat('gold'));
@@ -174,13 +175,13 @@ export const LastHorizon: WorldDefinition = {
       fin.position.set(i * 120, 1100 + fin.scale.y / 2, 0);
       mega.add(fin);
     }
-    mega.position.set(0, -1700, megaB.z);
+    mega.position.set(megaB.x, -1700, megaB.z);
     b.add(mega);
     let rise = 0;
     let riseTarget = 0;
     kit.onUpdate.push((dt) => {
-      rise += (riseTarget - rise) * (1 - Math.exp(-dt * 0.18));
-      mega.position.y = -1700 + rise * 1520;
+      rise += (riseTarget - rise) * (1 - Math.exp(-dt * 0.35));
+      mega.position.y = -1700 + rise * (megaB.y + 1700);
       megaRing.rotation.z += dt * 0.01;
     });
     if (ctx.services.isDiscovered('horizon-reveal')) riseTarget = rise = 1;
@@ -211,7 +212,7 @@ export const LastHorizon: WorldDefinition = {
 
     const revealShot = {
       points: [v3(0, 1.7, O.z - 16), v3(0, 6, O.z - 4), v3(0, 40, O.z + 60), v3(0, 120, O.z + 260)],
-      look: [v3(0, 4, O.z - 200), v3(0, 60, megaB.z), v3(0, 200, megaB.z), v3(0, 240, megaB.z)],
+      look: [v3(0, 4, O.z - 200), v3(megaB.x, 40, megaB.z), v3(megaB.x, 160, megaB.z), v3(megaB.x, 200, megaB.z)],
       duration: 16,
     };
 
@@ -260,8 +261,8 @@ export const LastHorizon: WorldDefinition = {
       cinematic: [
         { points: [v3(-30, 4, 30), v3(-10, 6, 0), v3(4, 3, -40)], look: [v3(0, 10, -100), v3(0, 20, -200), v3(0, 30, -400)], duration: 20 },
         { points: [v3(60, -20, -80), v3(40, 10, -200), v3(30, 40, -330)], look: [v3(0, 20, -100), v3(0, 30, -220), v3(0, 0, -430)], duration: 22 },
-        { points: [v3(0, 3, -360), v3(0, 2.4, -420), v3(0, 3, -445)], look: [v3(0, 6, -600), v3(0, 30, -1400), v3(0, 160, megaB.z)], duration: 16 },
-        { points: [v3(-200, 80, -300), v3(-260, 140, -700), v3(-180, 240, -1100)], look: [v3(-1300, 300, -1700), v3(-1300, 300, -1700), v3(0, 200, megaB.z)], duration: 24 },
+        { points: [v3(0, 3, -360), v3(0, 2.4, -420), v3(0, 3, -445)], look: [v3(0, 6, -600), v3(40, 40, -1200), v3(megaB.x, 120, megaB.z)], duration: 16 },
+        { points: [v3(-200, 80, -300), v3(-260, 140, -700), v3(-180, 240, -1100)], look: [v3(-1300, 300, -1700), v3(-1300, 300, -1700), v3(megaB.x, 200, megaB.z)], duration: 24 },
         { points: [v3(30, 30, 60), v3(0, 22, 20), v3(-30, 14, -20)], look: [v3(0, 0, -200), v3(0, 0, -300), v3(0, 10, -400)], duration: 18 },
       ],
     });

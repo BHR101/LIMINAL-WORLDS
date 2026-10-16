@@ -192,7 +192,9 @@ export const ImpossibleHouse: WorldDefinition = {
     });
     furnitureSet(b, -5.5, H.z0 - 9.5, 0.2);
     for (let i = 0; i < 3; i++) b.box(-9.6, 0, H.z0 - 4.8 - i * 1.1, 0.5, 2.6, 1, 'wood');
-    b.box(-9.86, 0.9, H.z0 - 8, 0.08, 1.4, 1.6, 'rose', { collide: false });
+    // A modest frame around a window that is not modest at all.
+    for (const dz of [-0.68, 0.68]) b.box(-9.84, 0.92, H.z0 - 8 + dz, 0.1, 1.16, 0.12, 'rose', { collide: false });
+    for (const y of [0.92, 2.0]) b.box(-9.84, y, H.z0 - 8, 0.1, 0.08, 1.48, 'rose', { collide: false });
     lamp(-5.9, 2.95, H.z0 - 8, 5, 10);
 
     // Stairwell (west): the stair up to the "attic".
@@ -208,9 +210,16 @@ export const ImpossibleHouse: WorldDefinition = {
       x: TURNED.x, z: TURNED.z, y0: 0, width: 6, depth: 7, height: 3.4, wall: 0.4, mat: 'rose', floorMat: 'wood', ceilingMat: 'ivory',
       openings: [
         { side: 'w', offset: 1.6, width: 1.1, height: 2.2 },
+        { side: 'e', offset: -1.6, width: 1.4, height: 1.5, sill: 0.9 },
         { side: 's', width: 1.6, height: 1.4, sill: 0.9 },
       ],
     });
+    // Cues that make the 90° turn legible from the parlour: a window, a hanging lamp, a painting.
+    b.box(TURNED.x + 2.9, 0.86, TURNED.z - 1.6, 0.2, 0.08, 1.6, 'wood', { collide: false });
+    b.box(TURNED.x + 2.95, 1.0, TURNED.z + 1.4, 0.06, 1.1, 1.5, 'wood', { collide: false });
+    b.box(TURNED.x + 2.9, 1.1, TURNED.z + 1.4, 0.06, 0.9, 1.3, 'glowSoft', { collide: false });
+    b.box(TURNED.x + 1.2, 2.2, TURNED.z - 1.6, 0.03, 1.2, 0.03, 'dark', { collide: false, castShadow: false });
+    b.box(TURNED.x + 1.2, 1.9, TURNED.z - 1.6, 0.5, 0.3, 0.5, 'glow', { collide: false });
     for (let i = 0; i < 4; i++) b.box(TURNED.x - 2.2 + i * 1.5, 0, TURNED.z - 3.25, 1.3, 3, 0.5, 'wood');
     for (let i = 0; i < 4; i++) for (let k = 0; k < 4; k++) b.box(TURNED.x - 2.2 + i * 1.5, 0.4 + k * 0.7, TURNED.z - 3.1, 1.1, 0.45, 0.25, rng.chance(0.5) ? 'rose' : 'beige', { collide: false, castShadow: false });
     furnitureSet(b, TURNED.x + 0.6, TURNED.z + 0.3, Math.PI / 2);
@@ -297,7 +306,7 @@ export const ImpossibleHouse: WorldDefinition = {
       { id: 'turned-back', position: v3(TURNED.x - 2.98, 1.1, TURNED.z + 1.6), rotY: Math.PI / 2, width: 1.1, height: 2.2, label: 'Return to the parlour', tint: 0xffd2b0,
         target: { kind: 'local', position: v3(9.3, 1.1, H.z0 - 8), rotY: Math.PI / 2, roll: -Math.PI / 2 } },
       { id: 'study-window', position: v3(-9.88, 1.5, H.z0 - 8), rotY: Math.PI / 2, width: 1.2, height: 1.0, label: 'Climb through the window', discovery: 'house-window', tint: 0xffd2b0,
-        target: { kind: 'local', position: v3(VISTA.x + 15, 1.5, VISTA.z), rotY: Math.PI / 2 } },
+        target: { kind: 'local', position: v3(VISTA.x + 15, 1.5, VISTA.z), rotY: Math.PI / 2 - 0.45 } },
       { id: 'vista-window', position: v3(VISTA.x + 15.58, 1.5, VISTA.z), rotY: -Math.PI / 2, width: 1.2, height: 1.0, label: 'Climb back into the study', tint: 0xffd2b0,
         target: { kind: 'local', position: v3(-9.3, 1.5, H.z0 - 8), rotY: -Math.PI / 2 } },
       { id: 'attic-door', position: v3(-9.88, 4.1, H.z0 - 20), rotY: Math.PI / 2, width: 1.1, height: 2.2, label: 'Go up to the attic', discovery: 'house-stair', tint: 0xffd2b0,

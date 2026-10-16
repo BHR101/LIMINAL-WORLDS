@@ -36,6 +36,14 @@ export class CinematicCamera {
     this.finished = false;
   }
 
+  /** Jump to a time (seconds) within a shot. */
+  seek(index: number, time: number): void {
+    if (!this.shots.length) return;
+    this.index = ((index % this.shots.length) + this.shots.length) % this.shots.length;
+    this.time = time;
+    this.finished = false;
+  }
+
   get active(): boolean {
     return this.shots.length > 0 && !this.finished;
   }

@@ -180,6 +180,9 @@ export const ObsidianCity: WorldDefinition = {
     b.box(east - 4, M.ry + 0.02, M.z, 7.5, 0.02, 11.5, 'graphite', { collide: false });
     sculpture(b, { position: v3(east - 5, M.ry + 2.6, M.z + 2), size: 0.6, kind: 'nested', mat: 'obsidian', innerMat: 'glowAmber', float: 0.2 });
     for (const dz of [-5.4, 5.4]) b.box(east - 7.6, M.ry, M.z + dz, 0.1, M.rh, 0.1, 'glowAmber', { collide: false, castShadow: false });
+    const roomLight = new THREE.PointLight(0xffa654, 260, 24, 1.6);
+    roomLight.position.set(east - 3, M.ry + 4.5, M.z);
+    b.add(roomLight);
     b.box(M.x, 0, M.z, 0.2, M.ry, M.s + 0.1, 'glowViolet', { collide: false, castShadow: false });
 
     // --- The anamorphic ring: fragments that align from one stone -------------------
