@@ -18,6 +18,7 @@ const failed = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 page.on('requestfailed', (r) => failed.push(r.url()));
+page.on('response', (r) => r.status() >= 400 && failed.push(`${r.status()} ${r.url()}`));
 
 const E = (fn, arg) => page.evaluate(fn, arg);
 const state = () =>
