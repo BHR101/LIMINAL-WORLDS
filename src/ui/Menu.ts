@@ -8,10 +8,11 @@ import { button, el, escapeHtml } from './dom';
 type Screen = 'title' | 'pause' | 'worlds' | 'settings' | 'controls' | 'journal' | 'none';
 
 const CONTROLS: [string, string][] = [
-  ['W A S D / arrows', 'Move'],
+  ['W A S D / arrows', 'Move · in fractal worlds you fly where you look'],
   ['Mouse', 'Look (click the view to capture the pointer)'],
   ['Shift', 'Sprint'],
-  ['Space', 'Jump'],
+  ['Space', 'Jump · in fractal worlds, rise'],
+  ['C', 'Descend (fractal worlds)'],
   ['E', 'Interact · step through portals'],
   ['Esc', 'Pause and release the pointer'],
   ['F', 'Toggle fullscreen'],
@@ -91,7 +92,7 @@ export class Menu {
       el(
         'footer',
         'title-footer',
-        `<span>Five worlds · procedural architecture · open source</span><span class="device-note">Best on a desktop browser with keyboard and mouse · headphones recommended</span>`,
+        `<span>Eight worlds · fractals, illusions and impossible architecture · open source</span><span class="device-note">Best on a desktop browser with keyboard and mouse · headphones recommended</span>`,
       ),
     );
     return s;

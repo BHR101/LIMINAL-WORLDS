@@ -27,6 +27,7 @@ const state = () =>
     const p = e.player.position;
     return { mode: e.mode, world: e.worldDef?.id, x: p.x, y: p.y, z: p.z, roll: e.player.roll, cine: e.cinematicMode };
   });
+const place = (id, opts) => E(([id, opts]) => window.liminal.engine.debugPlace(id, opts), [id, opts]);
 const hold = async (key, ms) => {
   await page.keyboard.down(key);
   await page.waitForTimeout(ms);
@@ -50,7 +51,7 @@ for (const label of ['Enter the World', 'Explore a Random World', 'World Selecti
 // World selection panel lists all worlds with previews.
 await page.getByRole('button', { name: 'World Selection', exact: true }).first().click();
 await page.waitForTimeout(800);
-check('world selection shows 6 cards', (await page.locator('.world-card').count()) === 6);
+check('world selection shows 9 cards', (await page.locator('.world-card').count()) === 9);
 await page.locator('.world-card[data-id="infinite-ascent"]').click();
 check('card selection state', (await page.locator('.world-card.selected').getAttribute('data-id')) === 'infinite-ascent');
 await page.getByRole('button', { name: 'Back' }).first().click();
@@ -59,11 +60,30 @@ await page.getByRole('button', { name: 'Back' }).first().click();
 await page.getByRole('button', { name: 'Enter the World', exact: true }).click();
 await waitFor(() => window.liminal.engine.mode === 'playing', null, 90000);
 let s = await state();
-check('enter world → playing in cathedral', s.world === 'sunken-cathedral', JSON.stringify(s));
-const z0 = s.z;
-await hold('w', 2500);
+check('enter world → flying in the Infinite Regress', s.world === 'infinite-regress', JSON.stringify(s));
+const p0 = [s.x, s.y, s.z];
+await hold('w', 3000);
 s = await state();
-check('W moves forward', s.z < z0 - 0.5, `dz=${(s.z - z0).toFixed(2)}`);
+const moved = Math.hypot(s.x - p0[0], s.y - p0[1], s.z - p0[2]);
+check('W flies forward', moved > 0.3, `moved ${moved.toFixed(2)}`);
+check('flight stays clear of the fractal', await E(() => window.liminal.engine.world.flight.sdf(window.liminal.engine.player.position) > 0));
+// Fly inward across the renormalisation boundary: the world must rescale seamlessly.
+await E(() => {
+  const e = window.liminal.engine;
+  const dir = e.world.spawn.position.clone().normalize();
+  e.player.position.copy(dir.multiplyScalar(30 / 3 + 0.4));
+  e.player.velocity.set(0, 0, 0);
+  e.player.yaw = e.world.spawn.yaw;
+  e.player.pitch = e.world.spawn.pitch ?? 0;
+});
+await page.keyboard.down('w');
+await waitFor(() => window.liminal.engine.player.position.length() > 20, null, 60000).catch(() => undefined);
+await page.keyboard.up('w');
+const rAfter = await E(() => window.liminal.engine.player.position.length());
+check('inward flight renormalises (×3) instead of reaching the centre', rAfter > 20 && rAfter <= 30.5, `|p| = ${rAfter.toFixed(2)}`);
+await place('sunken-cathedral', {});
+await page.waitForTimeout(800);
+await hold('w', 2000);
 await hold('a', 2500);
 s = await state();
 check('corridor walls block movement', Math.abs(s.x) < 1.3, `x=${s.x.toFixed(2)}`);
@@ -84,7 +104,6 @@ check('M toggles mute and persists', muted === true);
 await page.keyboard.press('m');
 
 // Rendered portal: the chapel door leads to a hall 2.5 km away.
-const place = (id, opts) => E(([id, opts]) => window.liminal.engine.debugPlace(id, opts), [id, opts]);
 await place('sunken-cathedral', { position: [61.8, -0.4, -30], yaw: -Math.PI / 2 });
 await page.waitForTimeout(600);
 await page.keyboard.down('w');
@@ -124,7 +143,7 @@ check('turned-room portal crossing', s.z < -1300 && Math.abs(s.y) < 0.3, `z=${s.
 
 // Window portal via E (auto-walk through a window-sized opening).
 await place('impossible-house', { position: [-8.6, 0, -1008], yaw: Math.PI / 2 });
-await page.waitForTimeout(800);
+await page.waitForFunction(() => /window/i.test(document.querySelector('.hud-prompt')?.textContent ?? ''), null, { timeout: 20000 }).catch(() => undefined);
 const prompt = await page.textContent('.hud-prompt');
 check('interaction prompt near the study window', /window/i.test(prompt ?? ''), prompt ?? '');
 await page.keyboard.press('e');
@@ -139,6 +158,40 @@ await page.keyboard.press('e');
 await waitFor(() => window.liminal.engine.worldDef?.id === 'obsidian-city' && window.liminal.engine.mode === 'playing', null, 90000).catch(() => undefined);
 s = await state();
 check('hollow pillar → Obsidian City', s.world === 'obsidian-city', JSON.stringify(s));
+
+// The Gallery: the stair that never tops out (translation portal) and the painting of itself.
+await place('contradiction-gallery', {});
+const sp = await E(() => {
+  const p = window.liminal.engine.world.portals.find((x) => x.id === 'endless-stair').position;
+  return [p.x - 1.6, p.y - 1.6, p.z];
+});
+await place('contradiction-gallery', { position: sp, yaw: -Math.PI / 2 });
+await page.waitForTimeout(800);
+await page.keyboard.down('w');
+await waitFor((y0) => window.liminal.engine.player.position.y < y0 - 5, sp[1], 60000).catch(() => undefined);
+await page.keyboard.up('w');
+s = await state();
+check('endless stair: climbing off the top lands on the bottom flight', s.y < sp[1] - 5, `y ${sp[1].toFixed(2)} → ${s.y.toFixed(2)}`);
+await place('contradiction-gallery', { position: [0, 0, -36.5], yaw: 0 });
+await page.waitForTimeout(800);
+await page.keyboard.down('w');
+await waitFor(() => window.liminal.engine.player.position.z > -25, null, 60000).catch(() => undefined);
+await page.keyboard.up('w');
+s = await state();
+check('stepping into the recursive painting puts you back in front of it', s.z > -25, `z = ${s.z.toFixed(1)}`);
+check('discovery recorded (gallery-droste)', await E(() => window.liminal.engine.discoveries.isFound('gallery-droste')));
+
+// The Recursive Machine: pushing the 4D slice rewires the architecture.
+await place('recursive-machine', {});
+await page.waitForTimeout(800);
+const w0 = await E(() => window.liminal.engine.world.root.getObjectByName('raymarch').material.uniforms.uW4.value);
+await E(() => window.liminal.engine.player.position.set(13.5, 13.5, 16));
+await page.waitForTimeout(500);
+await page.keyboard.press('e');
+await page.waitForTimeout(3000);
+const w1 = await E(() => window.liminal.engine.world.root.getObjectByName('raymarch').material.uniforms.uW4.value);
+check('machine slice advances along the fourth axis', w1 > w0, `w ${w0.toFixed(2)} → ${w1.toFixed(2)}`);
+check('discovery recorded (machine-rewire)', await E(() => window.liminal.engine.discoveries.isFound('machine-rewire')));
 
 // Fall recovery.
 await place('infinite-ascent', {});
@@ -185,7 +238,7 @@ const n2 = await E(() => window.liminal.engine.world.name);
 check('random world reproducible from seed', n1 === n2, n1);
 
 // Every world builds without errors.
-for (const id of ['sunken-cathedral', 'infinite-ascent', 'obsidian-city', 'impossible-house', 'last-horizon']) {
+for (const id of ['infinite-regress', 'contradiction-gallery', 'recursive-machine', 'sunken-cathedral', 'infinite-ascent', 'obsidian-city', 'impossible-house', 'last-horizon']) {
   await place(id, {});
   await page.waitForTimeout(1500);
   check(`world ${id} renders`, (await state()).world === id);

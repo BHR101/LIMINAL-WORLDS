@@ -4,7 +4,7 @@ import type { Atmosphere } from '../rendering/Lighting';
 import type { QualityProfile } from '../rendering/Quality';
 import type { PortalDef } from '../architecture/Portals';
 
-export type SoundscapeId = 'cathedral' | 'ascent' | 'obsidian' | 'house' | 'horizon';
+export type SoundscapeId = 'cathedral' | 'ascent' | 'obsidian' | 'house' | 'horizon' | 'regress' | 'machine' | 'gallery';
 
 export interface Arrival {
   position: THREE.Vector3;
@@ -66,6 +66,10 @@ export interface WorldServices {
   cameraMove(shot: CinematicShot, onDone?: () => void): void;
   isDiscovered(id: string): boolean;
   reducedMotion(): boolean;
+  /** Drive the endless Shepard tone (phase in octaves; null stops it). */
+  shepard(phase: number | null): void;
+  /** Move the viewer instantly (with a soft flash). */
+  teleport(position: THREE.Vector3, yaw: number): void;
 }
 
 export interface WorldContext {
@@ -74,6 +78,13 @@ export interface WorldContext {
   quality: QualityProfile;
   seed: number;
   services: WorldServices;
+}
+
+/** Free-flight movement through a distance field (fractal worlds). */
+export interface FlightSpec {
+  sdf: (p: THREE.Vector3) => number;
+  /** Called after each player update: rescale, renormalise, count progress. */
+  afterUpdate?: (player: import('../player/PlayerController').PlayerController) => void;
 }
 
 export interface WorldInstance {
@@ -94,6 +105,12 @@ export interface WorldInstance {
   emitters: SoundEmitter[];
   soundscape: SoundscapeId;
   seed?: number;
+  /** Fly instead of walk. */
+  flight?: FlightSpec;
+  /** Drives the camera on the title screen and in cinematic mode instead of spline shots. */
+  cameraDriver?: (dt: number, camera: THREE.PerspectiveCamera) => void;
+  /** Multiplier on pixel ratio for very expensive (ray-marched) worlds. */
+  renderScale?: number;
   update(dt: number, t: number, eye: THREE.Vector3): void;
   dispose(): void;
 }

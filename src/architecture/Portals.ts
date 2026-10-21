@@ -33,6 +33,8 @@ export interface PortalDef {
   tint?: THREE.ColorRepresentation;
   /** Hidden until revealed by a discovery effect. */
   hidden?: boolean;
+  /** Show itself inside its own view (infinite recursion, Droste effect). */
+  recursive?: boolean;
 }
 
 export function frameMatrix(position: THREE.Vector3, rotY: number, roll = 0): THREE.Matrix4 {

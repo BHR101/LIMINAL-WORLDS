@@ -37,7 +37,7 @@ function furnitureSet(b: ArchBuilder, x: number, z: number, rotY: number): void 
 
 export const ImpossibleHouse: WorldDefinition = {
   id: 'impossible-house',
-  numeral: 'IV',
+  numeral: 'VII',
   name: 'The Impossible House',
   tagline: 'A modest house with an immodest interior.',
   description:

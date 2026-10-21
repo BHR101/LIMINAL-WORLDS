@@ -12,6 +12,8 @@ import { planWorld } from '../src/worlds/WorldGenerator';
 import { glide } from '../src/systems/CinematicCamera';
 import { DISCOVERIES } from '../src/worlds/discoveries';
 import { DiscoverySystem } from '../src/systems/DiscoverySystem';
+import { WORLDS } from '../src/worlds/WorldRegistry';
+import { mengerSDF, lattice4SDF } from '../src/rendering/Fractals';
 import type { InputManager } from '../src/core/InputManager';
 
 const memoryStore = (): KeyValueStore & { map: Map<string, string> } => {
@@ -220,10 +222,11 @@ describe('Cinematic easing', () => {
 });
 
 describe('Discoveries', () => {
-  it('has at least ten unique secrets spread over all five worlds', () => {
-    expect(DISCOVERIES.length).toBeGreaterThanOrEqual(10);
+  it('has unique secrets, at least two in every world, none for unknown worlds', () => {
     expect(new Set(DISCOVERIES.map((d) => d.id)).size).toBe(DISCOVERIES.length);
-    expect(new Set(DISCOVERIES.map((d) => d.world)).size).toBe(5);
+    const ids = new Set(WORLDS.map((w) => w.id));
+    for (const d of DISCOVERIES) expect(ids.has(d.world)).toBe(true);
+    for (const w of WORLDS) expect(DISCOVERIES.filter((d) => d.world === w.id).length).toBeGreaterThanOrEqual(2);
   });
   it('persists found secrets and ignores unknown ids', () => {
     const store = memoryStore();
@@ -240,5 +243,41 @@ describe('Discoveries', () => {
     expect(d.isFound('cathedral-reveal')).toBe(false);
     d.check([spot], new THREE.Vector3(1, 1.6, 0), new THREE.Vector3(0, 0, -1));
     expect(d.isFound('cathedral-reveal')).toBe(true);
+  });
+});
+
+describe('Fractal fields', () => {
+  it('the Menger lattice is self-similar under renormalisation (p → 3p, σ → 3σ)', () => {
+    const R0 = 30;
+    for (let i = 0; i < 200; i++) {
+      const dir = new THREE.Vector3(Math.sin(i * 1.3), Math.cos(i * 0.7), Math.sin(i * 2.1 + 1)).normalize();
+      const p = dir.multiplyScalar((R0 / 3) * (1 + (i % 10) * 0.004));
+      const s = p.length() / R0;
+      const a = mengerSDF(p.x, p.y, p.z, s);
+      const b = mengerSDF(p.x * 3, p.y * 3, p.z * 3, s * 3);
+      expect(b).toBeCloseTo(3 * a, 6);
+    }
+  });
+  it('the Menger field is mostly air at the viewer scale', () => {
+    let air = 0;
+    for (let i = 0; i < 400; i++) {
+      const p = new THREE.Vector3(Math.sin(i * 12.9898) * 20, Math.sin(i * 78.233) * 20, Math.sin(i * 37.719) * 20);
+      if (mengerSDF(p.x, p.y, p.z, p.length() / 30) > 0) air++;
+    }
+    expect(air / 400).toBeGreaterThan(0.5);
+  });
+  it('the 4D lattice keeps its great 3D tunnels open for every slice', () => {
+    // The centre of a 27 m cell lies on three permanent tunnels.
+    for (let w = 0; w < 30; w += 0.37) expect(lattice4SDF(13.5, 13.5, 13.5, w)).toBeGreaterThan(3);
+  });
+  it('moving the slice along w changes the architecture', () => {
+    let changed = 0;
+    for (let i = 0; i < 200; i++) {
+      const x = (i * 7.31) % 40;
+      const y = (i * 3.17) % 40;
+      const z = (i * 5.73) % 40;
+      if (Math.sign(lattice4SDF(x, y, z, 0.3)) !== Math.sign(lattice4SDF(x, y, z, 1.5))) changed++;
+    }
+    expect(changed).toBeGreaterThan(5);
   });
 });

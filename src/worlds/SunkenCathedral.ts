@@ -16,7 +16,7 @@ const HALL_X = 2600; // the chapel's interior lives far out in the fog
 
 export const SunkenCathedral: WorldDefinition = {
   id: 'sunken-cathedral',
-  numeral: 'I',
+  numeral: 'IV',
   name: 'The Sunken Cathedral',
   tagline: 'Concrete, water, and light that arrives from very far away.',
   description:

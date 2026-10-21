@@ -8,6 +8,8 @@ export interface PortalInstance {
   material: THREE.ShaderMaterial;
   rendered: boolean;
   target: THREE.WebGLRenderTarget | null;
+  /** Second buffer for recursive portals (ping-pong so a texture is never read while written). */
+  back: THREE.WebGLRenderTarget | null;
   transform: THREE.Matrix4 | null;
   inverseFrame: THREE.Matrix4;
   exitPlaneNormal: THREE.Vector3;
@@ -73,6 +75,7 @@ export class PortalSystem {
         material,
         rendered,
         target,
+        back: rendered && def.recursive && target ? target.clone() : null,
         transform: portalTransform(def),
         inverseFrame: frameMatrix(def.position, def.rotY).invert(),
         exitPlaneNormal: exit ? new THREE.Vector3(0, 0, -1).transformDirection(exit) : new THREE.Vector3(),
@@ -94,7 +97,10 @@ export class PortalSystem {
   resize(): void {
     this.renderer.getDrawingBufferSize(this.size);
     for (const p of this.portals) {
-      p.target?.setSize(Math.max(64, Math.round(this.size.x * this.quality.portalScale)), Math.max(64, Math.round(this.size.y * this.quality.portalScale)));
+      const w = Math.max(64, Math.round(this.size.x * this.quality.portalScale));
+      const h = Math.max(64, Math.round(this.size.y * this.quality.portalScale));
+      p.target?.setSize(w, h);
+      p.back?.setSize(w, h);
     }
   }
 
@@ -139,6 +145,9 @@ export class PortalSystem {
 
   update(dt: number, t: number, eye: THREE.Vector3): void {
     for (const p of this.portals) {
+      // The surface is an open-fronted box; seen from behind it would show its
+      // inside, so only draw it from the front.
+      p.mesh.visible = !p.def.hidden && this.local(p, eye, _v).z > -0.05;
       const d = eye.distanceTo(p.def.position);
       const want = d < 6 ? 1 - d / 6 : 0;
       p.glow += (want - p.glow) * (1 - Math.exp(-dt * 3));
@@ -183,16 +192,15 @@ export class PortalSystem {
     this.renderer.shadowMap.autoUpdate = false;
     const vc = this.virtualCamera;
     for (const { p } of toRender) {
-      vc.copy(camera, false);
-      _pm.multiplyMatrices(p.transform!, camera.matrixWorld);
-      _pm.decompose(vc.position, vc.quaternion, vc.scale);
-      vc.updateMatrixWorld(true);
-      vc.projectionMatrix.copy(camera.projectionMatrix);
-      vc.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
-      this.applyObliqueClip(vc, p);
-      this.renderer.setRenderTarget(p.target);
-      this.renderer.clear();
-      this.renderer.render(this.scene, vc);
+      if (p.back && p.target) {
+        this.renderRecursive(p, camera, vc);
+      } else {
+        this.placeVirtual(vc, camera, p.transform!);
+        this.applyObliqueClip(vc, p.exitPlaneNormal, p.exitPoint);
+        this.renderer.setRenderTarget(p.target);
+        this.renderer.clear();
+        this.renderer.render(this.scene, vc);
+      }
       p.ready = 1;
       p.material.uniforms.uReady.value = 1;
     }
@@ -201,12 +209,60 @@ export class PortalSystem {
     for (const h of hidden) h.visible = true;
   }
 
+  private placeVirtual(vc: THREE.PerspectiveCamera, camera: THREE.PerspectiveCamera, transform: THREE.Matrix4): void {
+    vc.copy(camera, false);
+    _pm.multiplyMatrices(transform, camera.matrixWorld);
+    _pm.decompose(vc.position, vc.quaternion, vc.scale);
+    vc.updateMatrixWorld(true);
+    vc.projectionMatrix.copy(camera.projectionMatrix);
+    vc.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+  }
+
+  /**
+   * A portal that shows itself: render level N (camera pushed N times through
+   * the portal, surface hidden) first, then each shallower level with the
+   * surface showing the level below it. Each level is exact, so the result is
+   * a true infinite-looking regress, limited only by depth and fog.
+   */
+  private renderRecursive(p: PortalInstance, camera: THREE.PerspectiveCamera, vc: THREE.PerspectiveCamera): void {
+    const depth = this.quality.preset === 'performance' ? 2 : this.quality.preset === 'balanced' ? 3 : 5;
+    const T = p.transform!;
+    const Tk = new THREE.Matrix4();
+    const entryPoint = p.def.position;
+    let src: THREE.WebGLRenderTarget | null = null;
+    let dst = p.target!;
+    let other = p.back!;
+    for (let k = depth; k >= 1; k--) {
+      Tk.identity();
+      for (let i = 0; i < k; i++) Tk.premultiply(T);
+      this.placeVirtual(vc, camera, Tk);
+      // The opening seen from level k is the entry portal carried k times through.
+      const planePoint = entryPoint.clone().applyMatrix4(Tk);
+      this.applyObliqueClip(vc, p.exitPlaneNormal, planePoint);
+      p.mesh.visible = src !== null;
+      if (src) {
+        p.material.uniforms.uView.value = src.texture;
+        p.material.uniforms.uResolution.value.set(src.width, src.height);
+      }
+      this.renderer.setRenderTarget(dst);
+      this.renderer.clear();
+      this.renderer.render(this.scene, vc);
+      src = dst;
+      [dst, other] = [other, dst];
+    }
+    p.mesh.visible = false;
+    p.target = src!;
+    p.back = dst;
+    p.material.uniforms.uView.value = p.target.texture;
+    p.material.uniforms.uResolution.value.copy(this.drawingSize());
+  }
+
   private drawingSize(): THREE.Vector2 {
     return this.renderer.getDrawingBufferSize(this.size);
   }
 
-  private applyObliqueClip(vc: THREE.PerspectiveCamera, p: PortalInstance): void {
-    _plane.setFromNormalAndCoplanarPoint(p.exitPlaneNormal, p.exitPoint);
+  private applyObliqueClip(vc: THREE.PerspectiveCamera, normal: THREE.Vector3, point: THREE.Vector3): void {
+    _plane.setFromNormalAndCoplanarPoint(normal, point);
     _plane.applyMatrix4(vc.matrixWorldInverse);
     // The virtual camera must sit behind the exit plane; skip when it is on or past it.
     if (_plane.constant > -0.05) return;
@@ -229,6 +285,7 @@ export class PortalSystem {
       p.mesh.geometry.dispose();
       for (const m of p.mesh.material as THREE.Material[]) m.dispose();
       p.target?.dispose();
+      p.back?.dispose();
     }
     this.portals = [];
   }
