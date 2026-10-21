@@ -176,6 +176,13 @@ export class Engine {
       cameraMove: (shot, onDone) => this.playScripted(shot, onDone),
       isDiscovered: (id) => this.discoveries.isFound(id),
       reducedMotion: () => this.settings.data.reducedMotion,
+      shepard: (phase) => this.audio.setShepard(phase),
+      teleport: (position, yaw) => {
+        this.player.teleport(position, yaw);
+        this.player.eyePosition(this.prevEye);
+        this.audio.play('whoosh');
+        void this.flash(0xffffff, 0.8);
+      },
     };
   }
 
@@ -183,6 +190,7 @@ export class Engine {
     const def = getWorld(id);
     if (this.world) {
       this.portals.clear();
+      this.audio.setShepard(null);
       this.world.dispose();
       this.world = null;
     }
@@ -191,6 +199,11 @@ export class Engine {
     this.worldSeed = seed;
     this.world = def.build({ renderer: this.renderer, scene: this.scene, quality: this.quality, seed, services: this.services() });
     this.portals.load(this.world.portals, this.world.root);
+    this.player.fly = !!this.world.flight;
+    this.player.sdf = this.world.flight?.sdf ?? null;
+    this.player.scale = 1;
+    this.player.velocity.set(0, 0, 0);
+    this.resize();
     const cfg = this.world.atmosphere.config;
     this.baseExposure = cfg.exposure;
     this.renderer.toneMappingExposure = cfg.exposure;
@@ -277,8 +290,12 @@ export class Engine {
     this.fadeAmount = 0;
     this.cinematicMode = false;
     const shots = this.world!.cinematic;
-    this.cine.setShots(shots);
-    this.cine.seek(index, t01 * shots[index % shots.length].duration);
+    if (this.world!.cameraDriver) {
+      this.world!.cameraDriver(t01 * 30 + index * 7, this.camera);
+    } else {
+      this.cine.setShots(shots);
+      this.cine.seek(index, t01 * shots[index % shots.length].duration);
+    }
     this.cineFrozen = true;
   }
 
@@ -696,7 +713,7 @@ export class Engine {
   private resize(): void {
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality.maxPixelRatio));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality.maxPixelRatio) * (this.world?.renderScale ?? 1));
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -750,7 +767,7 @@ export class Engine {
     }
 
     let fade = this.fadeAmount;
-    if ((this.mode === 'menu' || this.cinematicMode) && !this.glide && !this.cineFrozen) fade = Math.max(fade, this.cine.fade * 0.85);
+    if ((this.mode === 'menu' || this.cinematicMode) && !this.glide && !this.cineFrozen && !world?.cameraDriver) fade = Math.max(fade, this.cine.fade * 0.85);
     if (this.scripted) fade = Math.max(fade, 0);
     this.post.uniforms.uFade.value = fade;
     this.post.uniforms.uFadeColor.value.copy(this.fadeAmount > 0 ? this.fadeColor : new THREE.Color(0x000000));
@@ -783,7 +800,8 @@ export class Engine {
       return;
     }
     if (this.mode === 'menu' || this.cinematicMode) {
-      this.cine.update(this.cineFrozen && this.mode === 'menu' ? 0 : realDt, cam);
+      if (world.cameraDriver) world.cameraDriver(this.cineFrozen && this.mode === 'menu' ? 0 : realDt, cam);
+      else this.cine.update(this.cineFrozen && this.mode === 'menu' ? 0 : realDt, cam);
       return;
     }
     if (this.scripted) {
@@ -814,6 +832,7 @@ export class Engine {
       }
     } else {
       this.player.update(dt, world.collision, world.killY);
+      world.flight?.afterUpdate?.(this.player);
     }
     const eye = this.player.eyePosition(new THREE.Vector3());
     const crossed = this.portals.crossed(this.prevEye, eye);

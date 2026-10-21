@@ -31,7 +31,7 @@ function poolMaterial(): THREE.ShaderMaterial {
 
 export const ObsidianCity: WorldDefinition = {
   id: 'obsidian-city',
-  numeral: 'III',
+  numeral: 'VI',
   name: 'The Obsidian City',
   tagline: 'A city of black glass that is only ever lit from within.',
   description:

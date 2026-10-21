@@ -156,6 +156,64 @@ export class AudioSystem {
     }
   }
 
+  private shepard: { oscs: OscillatorNode[]; gains: GainNode[]; out: GainNode } | null = null;
+
+  /**
+   * The Shepard tone: octave-spaced sines under a fixed bell-shaped loudness
+   * envelope. Sliding `phase` (in octaves) makes the pitch seem to fall (or
+   * rise) forever — the auditory twin of the infinite zoom.
+   */
+  setShepard(phase: number | null): void {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    if (phase === null) {
+      if (this.shepard) {
+        const s = this.shepard;
+        s.out.gain.setTargetAtTime(0, t, 0.3);
+        setTimeout(() => {
+          s.oscs.forEach((o) => o.stop());
+          s.out.disconnect();
+        }, 2000);
+        this.shepard = null;
+      }
+      return;
+    }
+    if (!this.shepard) {
+      const out = ctx.createGain();
+      out.gain.value = 0;
+      out.gain.setTargetAtTime(0.05, t, 1.5);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 2400;
+      out.connect(lp);
+      lp.connect(this.bus);
+      lp.connect(this.reverbSend);
+      const oscs: OscillatorNode[] = [];
+      const gains: GainNode[] = [];
+      for (let i = 0; i < 8; i++) {
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        o.connect(g).connect(out);
+        o.start();
+        oscs.push(o);
+        gains.push(g);
+      }
+      this.shepard = { oscs, gains, out };
+    }
+    const N = 8;
+    this.shepard.oscs.forEach((o, i) => {
+      const x = (((i - phase) % N) + N) % N; // 0..N octaves above the floor
+      const f = 32 * Math.pow(2, x);
+      if (Math.abs(o.frequency.value - f) > f * 0.5) o.frequency.value = f;
+      else o.frequency.setTargetAtTime(f, t, 0.05);
+      const env = Math.exp(-Math.pow((x / N - 0.5) / 0.17, 2) / 2);
+      this.shepard!.gains[i].gain.setTargetAtTime(env, t, 0.05);
+    });
+  }
+
   updateListener(pos: THREE.Vector3, forward: THREE.Vector3): void {
     if (!this.ctx) return;
     const l = this.ctx.listener;
@@ -271,6 +329,26 @@ export class AudioSystem {
         drone([220, 221.4, 329.1, 330.9], 0.016, 1400, 'triangle');
         drone([60], 0.012, 200);
         scale([392, 466.2, 587.3], 0.018, 4, 14, 30);
+        break;
+      case 'regress':
+        wind(0.08, 380, 0.5, 0.03);
+        drone([55, 82.4], 0.025, 300);
+        scale([440, 554.4, 659.3], 0.012, 10, 18, 30);
+        break;
+      case 'machine':
+        drone([55, 55.4, 110.2], 0.04, 420, 'square');
+        wind(0.025, 2600, 3, 0.2);
+        every(0.12, 0.6, () => {
+          if (!this.ctx || Math.random() < 0.55) return;
+          const f = [1318.5, 1567.98, 1975.5, 2349.3, 2637][Math.floor(Math.random() * 5)];
+          this.bell(f, this.ctx.currentTime, 0.008, 0.18, out);
+        });
+        every(2.4, 2.4, () => this.pulse(out));
+        break;
+      case 'gallery':
+        wind(0.025, 220, 0.4, 0.03);
+        drone([130.8, 196, 261.6], 0.012, 900, 'triangle');
+        scale([523.3, 659.3, 784, 1046.5], 0.014, 5, 10, 22);
         break;
       case 'horizon':
         wind(0.18, 520, 0.45, 0.04);

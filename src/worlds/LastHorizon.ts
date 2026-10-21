@@ -16,7 +16,7 @@ const BRIDGE_END = -430;
 
 export const LastHorizon: WorldDefinition = {
   id: 'last-horizon',
-  numeral: 'V',
+  numeral: 'VIII',
   name: 'The Last Horizon',
   tagline: 'The sun has been setting here for a very long time.',
   description:

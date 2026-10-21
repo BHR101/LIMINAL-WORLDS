@@ -40,7 +40,7 @@ function parapets(b: ArchBuilder, cx: number, y: number, cz: number, size: numbe
 
 export const InfiniteAscent: WorldDefinition = {
   id: 'infinite-ascent',
-  numeral: 'II',
+  numeral: 'V',
   name: 'The Infinite Ascent',
   tagline: 'Every stair arrives somewhere. Not always somewhere new.',
   description:

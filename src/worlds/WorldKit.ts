@@ -26,7 +26,7 @@ export function addDust(kit: Kit, color: THREE.ColorRepresentation, scale = 1, s
 }
 
 type Partial = Omit<WorldInstance, 'root' | 'collision' | 'atmosphere' | 'update' | 'dispose' | 'arrivals' | 'interactables' | 'triggers' | 'emitters' | 'portals' | 'discoveries'> &
-  Pick<Partial2<WorldInstance>, 'arrivals' | 'interactables' | 'triggers' | 'emitters' | 'portals' | 'discoveries'>;
+  Pick<Partial2<WorldInstance>, 'arrivals' | 'interactables' | 'triggers' | 'emitters' | 'portals' | 'discoveries' | 'flight' | 'cameraDriver' | 'renderScale'>;
 type Partial2<T> = { [K in keyof T]?: T[K] };
 
 /** Finalize geometry and assemble the WorldInstance with shared update/dispose logic. */
