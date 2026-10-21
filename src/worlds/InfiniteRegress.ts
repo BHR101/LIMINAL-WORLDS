@@ -12,27 +12,48 @@ const SIZE = 0.6; // body scale relative to the local structure
 const sigmaOf = (p: THREE.Vector3) => Math.max(p.length() / R0, 1e-6);
 const field = (p: THREE.Vector3) => mengerSDF(p.x, p.y, p.z, sigmaOf(p));
 
-/** Find a straight line into the vanishing point that stays clear of stone at every scale. */
-function findCorridor(seed: number): THREE.Vector3 {
-  const rng = new RNG(seed);
-  let best = v3(1, 0.62, 0.81).normalize();
-  let bestClear = -Infinity;
+const clearance = (p: THREE.Vector3) => field(p) / sigmaOf(p);
+
+function segmentClear(a: THREE.Vector3, b: THREE.Vector3, min: number): boolean {
+  const n = Math.max(8, Math.ceil(a.distanceTo(b) / (0.05 * Math.min(sigmaOf(a), sigmaOf(b)))));
   const p = new THREE.Vector3();
-  for (let i = 0; i < 600; i++) {
-    const u = v3(rng.range(0.2, 1), rng.range(-0.6, 0.9), rng.range(0.2, 1)).normalize();
-    let clear = Infinity;
-    for (let j = 0; j <= 48; j++) {
-      const r = R0 * Math.pow(3, -j / 48);
-      p.copy(u).multiplyScalar(r);
-      clear = Math.min(clear, mengerSDF(p.x, p.y, p.z, r / R0) / (r / R0));
-      if (clear < bestClear) break;
+  for (let i = 0; i <= n; i++) if (clearance(p.lerpVectors(a, b, i / n)) < min) return false;
+  return true;
+}
+
+/**
+ * A self-similar flight path: from A (|A| = R0) through waypoints that shrink
+ * geometrically to exactly A/3, every hop clear of stone. Because the world is
+ * identical after scaling by three, the path continues forever. No straight
+ * line works — the lattice's self-similar centres are corners of solid stone.
+ */
+export function findZoomPath(seed: number, hops = 12, min = 0.12): THREE.Vector3[] {
+  const rng = new RNG(seed);
+  const rand = () => rng.range(-1, 1);
+  for (let attempt = 0; attempt < 4000; attempt++) {
+    const A = new THREE.Vector3(rand(), rand(), rand()).normalize().multiplyScalar(R0);
+    if (clearance(A) < 0.4) continue;
+    const goal = A.clone().divideScalar(3);
+    const path = [A];
+    let ok = true;
+    for (let i = 1; i < hops && ok; i++) {
+      const prev = path[i - 1];
+      const r = R0 * Math.pow(3, -i / hops);
+      const target = prev.clone().lerp(goal, 1 / (hops - i + 1));
+      const jitter = 1.6 * sigmaOf(prev);
+      let next: THREE.Vector3 | null = null;
+      for (let c = 0; c < 200 && !next; c++) {
+        const cand = target.clone().add(new THREE.Vector3(rand(), rand(), rand()).multiplyScalar(jitter)).setLength(r);
+        if (clearance(cand) >= min * 2 && segmentClear(prev, cand, min)) next = cand;
+      }
+      if (next) path.push(next);
+      else ok = false;
     }
-    if (clear > bestClear) {
-      bestClear = clear;
-      best = u;
-    }
+    if (ok && segmentClear(path[hops - 1], goal, min)) return path;
   }
-  return best;
+  // Fallback (never expected): a straight line; the flight still works, only the title camera may graze stone.
+  const A = new THREE.Vector3(1, 0.6, 0.8).setLength(R0);
+  return Array.from({ length: hops }, (_, i) => A.clone().multiplyScalar(Math.pow(3, -i / hops)));
 }
 
 export const InfiniteRegress: WorldDefinition = {
@@ -97,9 +118,16 @@ export const InfiniteRegress: WorldDefinition = {
     });
     kit.b.add(layer);
 
-    const corridor = findCorridor(ctx.seed || 9);
-    const start = corridor.clone().multiplyScalar(R0 * 0.85);
-    const aim = corridor.clone().negate();
+    const path = findZoomPath(ctx.seed || 7);
+    const hops = path.length;
+    // Spline through the path plus scaled neighbours so tangents match across the loop.
+    const ctrl = [path[hops - 1].clone().multiplyScalar(3), ...path, path[0].clone().divideScalar(3), path[1].clone().divideScalar(3), path[2].clone().divideScalar(3)];
+    const curve = new THREE.CatmullRomCurve3(ctrl, false, 'centripetal');
+    const segs = ctrl.length - 1;
+    const at = (u: number, target: THREE.Vector3) => curve.getPoint((1 + u * hops) / segs, target);
+
+    const start = path[0].clone();
+    const aim = path[1].clone().sub(start).normalize();
     const yaw = Math.atan2(-aim.x, -aim.z);
     const pitch = Math.asin(aim.y);
 
@@ -107,24 +135,18 @@ export const InfiniteRegress: WorldDefinition = {
     let depth = 0; // renormalisations, inward positive
     const shepard = (p: THREE.Vector3) => ctx.services.shepard(depth + Math.log(R0 / p.length()) / Math.log(3));
 
-    // Title / cinematic: an endless drift into the vanishing point.
+    // Title / cinematic: an endless glide along the self-similar path.
     let driverT = 0;
-    const camPos = new THREE.Vector3();
+    const period = 14; // seconds per factor of three
+    const look = new THREE.Vector3();
     const driver = (dt: number, camera: THREE.PerspectiveCamera) => {
       driverT += dt;
-      const period = 11; // seconds per factor of three
-      const phase = (driverT / period) % 1;
-      const r = R0 * Math.pow(3, -phase);
-      camPos.copy(corridor).multiplyScalar(r);
-      // A slow, scale-relative sway keeps the view alive without touching stone.
-      const side = new THREE.Vector3().crossVectors(corridor, v3(0, 1, 0)).normalize();
-      const up = new THREE.Vector3().crossVectors(side, corridor).normalize();
-      const sw = (r / R0) * 0.08;
-      camPos.addScaledVector(side, Math.sin(driverT * 0.31) * sw).addScaledVector(up, Math.cos(driverT * 0.23) * sw);
-      camera.position.copy(camPos);
+      const u = (driverT / period) % 1;
+      at(u, camera.position);
+      at(Math.min(u + 1.6 / hops, (hops + 2.5) / hops), look);
       camera.up.set(0, 1, 0);
-      camera.lookAt(0, 0, 0);
-      camera.rotateZ(driverT * 0.035);
+      camera.lookAt(look);
+      camera.rotateZ(Math.sin(driverT * 0.11) * 0.25);
       ctx.services.shepard(driverT / period);
     };
 

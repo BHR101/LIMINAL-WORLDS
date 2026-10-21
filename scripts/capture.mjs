@@ -11,6 +11,9 @@ mkdirSync('docs/screenshots', { recursive: true });
 mkdirSync('scripts/.out/gif', { recursive: true });
 
 const previews = [
+  ['infinite-regress', 0, 0.12],
+  ['contradiction-gallery', 1, 0.99],
+  ['recursive-machine', 1, 0.6],
   ['sunken-cathedral', 0, 0.5],
   ['infinite-ascent', 0, 0.55],
   ['obsidian-city', 2, 0.55],
@@ -19,6 +22,16 @@ const previews = [
   ['random', 1, 0.5, 1234],
 ];
 const screenshots = [
+  ['regress-1', 'infinite-regress', 0, 0.12],
+  ['regress-2', 'infinite-regress', 0, 0.33],
+  ['gallery-triangle', 'contradiction-gallery', 1, 0.99],
+  ['gallery-triangle-broken', 'contradiction-gallery', 1, 0.0],
+  ['gallery-stairs', 'contradiction-gallery', 2, 0.99],
+  ['gallery-ames', 'contradiction-gallery', 3, 0.99],
+  ['gallery-droste', 'contradiction-gallery', 4, 0.35],
+  ['gallery-hypercube', 'contradiction-gallery', 0, 0.75],
+  ['machine-tunnel', 'recursive-machine', 1, 0.45],
+  ['machine-core', 'recursive-machine', 3, 0.5],
   ['cathedral-nave', 'sunken-cathedral', 0, 0.5],
   ['cathedral-colonnade', 'sunken-cathedral', 3, 0.55],
   ['cathedral-exterior', 'sunken-cathedral', 2, 0.6],
@@ -50,7 +63,7 @@ if (!only || only === 'title') {
   console.log('title');
 }
 if (!only || only === 'shots') {
-  for (const [name, id, i, t, seed] of screenshots) {
+  for (const [name, id, i, t, seed] of screenshots.filter((s) => !process.env.NAMES || process.env.NAMES.split(',').includes(s[0]))) {
     await seek(id, i, t, seed ?? 0);
     await page.waitForTimeout(5000);
     await page.screenshot({ path: `docs/screenshots/${name}.jpg`, type: 'jpeg', quality: 84 });
@@ -59,7 +72,7 @@ if (!only || only === 'shots') {
 }
 if (!only || only === 'previews') {
   await page.setViewportSize({ width: 640, height: 360 });
-  for (const [id, i, t, seed] of previews) {
+  for (const [id, i, t, seed] of previews.filter((p) => !process.env.NAMES || process.env.NAMES.split(',').includes(p[0]))) {
     await seek(id, i, t, seed ?? 0);
     await page.waitForTimeout(4000);
     await page.screenshot({ path: `public/previews/${id}.jpg`, type: 'jpeg', quality: 78 });
@@ -79,10 +92,12 @@ if (!only || only === 'select') {
 }
 if (!only || only === 'gif') {
   await page.setViewportSize({ width: 560, height: 315 });
+  // One full ×3 zoom of the Infinite Regress (11 s): the loop repeats exactly.
   const frames = 36;
+  await seek('infinite-regress', 0, 0);
   for (let f = 0; f < frames; f++) {
-    await seek('sunken-cathedral', 0, 0.12 + (f / frames) * 0.7);
-    await page.waitForTimeout(700);
+    await seek('infinite-regress', 0, 11 / frames / 30);
+    await page.waitForTimeout(900);
     await page.screenshot({ path: `scripts/.out/gif/f${String(f).padStart(3, '0')}.png` });
   }
   console.log('gif frames');

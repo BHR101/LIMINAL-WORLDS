@@ -2,17 +2,22 @@
 
 *Somewhere between geometry and memory.*
 
-Liminal Worlds is an open-source, first-person exploration of impossible
-architecture that runs in the browser. You walk through five procedurally built
-environments: a brutalist cathedral standing in an endless shallow sea, stairs
-that bring you back to where you started, a city of black glass, a house that is
-larger inside than out, and a bridge of colossal arches running toward a sunset
-that never ends.
+Liminal Worlds is an open-source, first-person exploration of **impossible
+architecture** that runs in the browser: spaces that cannot exist, rendered so
+you can stand inside them.
 
-There's no combat, no inventory and no quest chain. The architecture is the
-whole point.
+- Fly into a fractal that has no bottom. It rescales itself without a seam, so
+  the vanishing point stays exactly as far away no matter how long you fly.
+- Walk a gallery of real objects that are only possible from one viewpoint: a
+  Penrose triangle, stairs that only go up, an Ames room, and a painting that
+  contains itself.
+- Drift through a computer whose walls are a slice through four dimensions,
+  and watch it rewire itself around you.
 
-![Gliding down the nave of the Sunken Cathedral](docs/screenshots/liminal.gif)
+Five further worlds of monumental, dreamlike architecture surround them. There's
+no combat, no inventory and no quest chain. The geometry is the whole point.
+
+![Flying into the Infinite Regress: one full ×3 zoom, which repeats forever](docs/screenshots/liminal.gif)
 
 > Every image in this README was captured from the running project with
 > `scripts/capture.mjs`, which uses headless Chromium with SwiftShader (software
@@ -21,11 +26,12 @@ whole point.
 
 | | |
 |---|---|
-| ![Title screen: a live 3D scene emerging from fog](docs/screenshots/title.jpg) | ![World selection with in-engine previews](docs/screenshots/world-selection.jpg) |
-| ![The Sunken Cathedral](docs/screenshots/cathedral-nave.jpg) | ![The endless colonnade](docs/screenshots/cathedral-colonnade.jpg) |
-| ![The Infinite Ascent](docs/screenshots/ascent-tower.jpg) | ![The Obsidian City](docs/screenshots/obsidian-ring.jpg) |
-| ![The Impossible House: the hall behind the hallway door](docs/screenshots/house-nave.jpg) | ![The Last Horizon](docs/screenshots/horizon-arches.jpg) |
-| ![The Impossible House from outside](docs/screenshots/house-exterior.jpg) | ![A random world (seed 777)](docs/screenshots/random-world.jpg) |
+| ![The Infinite Regress](docs/screenshots/regress-1.jpg) | ![The Recursive Machine: a slice through a 4D lattice](docs/screenshots/machine-tunnel.jpg) |
+| ![The Penrose triangle seen from its viewpoint](docs/screenshots/gallery-triangle.jpg) | ![The same triangle from anywhere else](docs/screenshots/gallery-triangle-broken.jpg) |
+| ![The painting that contains itself](docs/screenshots/gallery-droste.jpg) | ![The Ames room: identical figures, impossible sizes](docs/screenshots/gallery-ames.jpg) |
+| ![The stairs that only go up](docs/screenshots/gallery-stairs.jpg) | ![A tesseract over a hyperbolic floor](docs/screenshots/gallery-hypercube.jpg) |
+| ![Title screen](docs/screenshots/title.jpg) | ![World selection with in-engine previews](docs/screenshots/world-selection.jpg) |
+| ![The Sunken Cathedral](docs/screenshots/cathedral-nave.jpg) | ![The Last Horizon](docs/screenshots/horizon-arches.jpg) |
 
 More captures are in [`docs/screenshots`](docs/screenshots).
 
@@ -35,7 +41,18 @@ More captures are in [`docs/screenshots`](docs/screenshots).
 
 All of the following are implemented and run in the current build:
 
-- **Five distinct worlds**, each with its own architecture, palette, lighting, fog, soundscape and cinematic camera paths:
+- **Three impossible worlds:**
+  1. **The Infinite Regress** (flight). A ray-marched Menger lattice carved at every power of three. Your size is tied to your distance from the vanishing point, and the world renormalises (position ×3, size ×3) at the boundary, so you can fly inward or outward forever with no seam. Unit tests confirm the field is identical across the rescale. A **Shepard tone**, the auditory version of the same illusion, falls endlessly as you fly in and rises as you fly out. This world is also the live title-screen backdrop.
+  2. **The Gallery of Contradictions** (walking). Every exhibit is real geometry:
+     - a **Penrose triangle** built from three perpendicular bars that close only from one marked stone (step away and watch it break)
+     - **Penrose stairs** that close into a loop from the balcony, and that you can actually climb forever thanks to a translation portal
+     - an **Ames room** built with a projective transform, where identical figures become a giant and a child, and a third grows and shrinks as it walks across
+     - a **painting that contains itself**, rendered as a true infinite regress with depth-first recursive portals; step in and you're back in front of it
+     - a rotating **4D tesseract** projected into 3D
+     - a **hyperbolic {7,3} floor** whose tiles flow toward an edge they never reach
+     - a **Klein bottle** and a **Möbius strip**
+  3. **The Recursive Machine** (flight). "Impossible computer architecture": a 3D slice through a four-dimensional lattice, shaded as circuitry with data pulses. As the slice drifts along the fourth axis, walls dissolve into slits and slits into halls, so the machine rewires itself around you. A tesseract turns at its core, and you can push the slice faster.
+- **Five worlds of monumental architecture**, each with its own palette, lighting, fog, soundscape and cinematic paths:
   1. **The Sunken Cathedral.** A 240 m brutalist nave in shallow reflective water, with a broken vault, shafts of sunlight, floating sculptures and columns that keep marching past the end of the roof into the fog.
   2. **The Infinite Ascent.** Pale stairs, bridges and floating terraces around a 560 m tower, with rotating rings, upside-down aqueducts, a stair that loops back to its own base, and an arch that leads to an inverted district.
   3. **The Obsidian City.** Black-glass plazas that mirror the sky, monoliths threaded with lines of light, a suspended ring, a luminous pool, an anamorphic sculpture that only resolves from one spot, and a giant rotating frame on the horizon.
@@ -48,11 +65,26 @@ All of the following are implemented and run in the current build:
 - **A cinematic camera.** Centripetal Catmull-Rom splines with eased speed and soft dips between shots. It drives the title sequence, an optional tour of each world (G), and scripted moments such as the horizon reveal.
 - **Lighting and materials.** ACES filmic tone mapping, sRGB output, a sun that casts shadows and follows the player, hemisphere light, image-based lighting baked from each sky, exponential fog, and world-space triplanar procedural concrete with formwork joints, tie holes, pores and weathering streaks. Also planar-reflection water and black glass, additive light shafts, cloud seas, selective bloom, vignette and grain.
 - **Signature set pieces.** The narrow corridor that opens into the nave (impossible reveal), the stair that returns and the inverted arch (architectural contradiction), and the observation platform where a megastructure rises from the clouds (horizon reveal).
-- **16 discoveries** across the five worlds, saved in `localStorage` and listed in an optional journal. Each one changes the world, plays a sound or reveals something.
+- **24 discoveries** across the eight worlds, saved in `localStorage` and listed in an optional journal. Each one changes the world, plays a sound or reveals something.
 - **Procedural audio** with the Web Audio API. Each world has its own mix of wind and water noise, detuned drones, inharmonic bells, low pulses and a generated reverb. Hum sources fade with distance, soundscapes crossfade between worlds, and there's a master volume and mute. No audio files are used.
 - **Photography mode** (P). The interface hides and you can fly the camera freely or orbit a point. You can change the field of view and exposure, add depth of field, and pick one of four lighting presets. It also has a freeze-time toggle and a gallery of this session's captures. Captures are exported as PNG from the final post-processed frame.
 - **Interface.** An animated 3D title screen, world selection with previews captured in-engine, settings, controls, a discovery journal and a pause menu. The HUD stays minimal (prompts, world name, temporary hints), menus are keyboard-accessible, and there's a reduced-motion option.
 - **Three graphics presets** (Performance, Balanced and Cinematic), a capped pixel ratio, and a performance overlay toggled with the backquote key (`` ` ``).
+
+## How the impossible parts work
+
+| Effect | Technique | Where |
+|---|---|---|
+| Endless fractal zoom | An infinite-band Menger signed distance field whose band weights depend on the viewer's scale σ = \|p\|/R₀. At \|p\| = R₀/3 everything is multiplied by 3, which leaves the field unchanged (`tests/core.test.ts` checks this). Rendered by a full-screen ray marcher that writes depth, so normal meshes composite with it. | `rendering/Fractals.ts`, `rendering/Raymarch.ts`, `worlds/InfiniteRegress.ts` |
+| Fractal collision | The same field is implemented in TypeScript. The flying body is a sphere pushed out along the numerical gradient. | `player/PlayerController.ts` |
+| Endless title flight | No straight line into the vanishing point stays clear, because the lattice's self-similar centres are corners of solid stone. At build time a seeded search finds a path of short, clear hops from A to exactly A/3. The camera rides a spline along it and jumps from A/3 back to A, which by self-similarity looks identical. | `worlds/InfiniteRegress.ts` |
+| Penrose triangle | Bars along +x, −y and +z whose start and end lie on one line through the viewpoint. Each cross-section is scaled by its distance, so all bars look equally thick. | `architecture/Impossible.ts` |
+| Penrose stairs | Two long and two short flights. The end landing is offset from the start along a vector that points at the balcony, and a translation portal on the end landing makes the climb endless. | `architecture/Impossible.ts` |
+| Ames room | The room is built as it should look, then every vertex is passed through `q → q / (1 + c·qₓ)` about the viewpoint. That transform keeps planes flat and rays through the eye fixed, but makes the room a real trapezoid. The figures are placed undistorted on the warped floor. | `architecture/Impossible.ts` |
+| Painting of itself | A portal whose exit is in front of itself. The levels are rendered deepest first, each showing the one below it in its frame. Depth is 2, 3 or 5 levels by graphics preset. | `systems/PortalSystem.ts` |
+| Rewiring machine | Holes are carved wherever two of four coordinates (x, y, z, w) sit in the middle third of a cell. Rendering a slice at a drifting w opens and closes only the w-dependent holes. | `rendering/Fractals.ts` |
+| Hyperbolic floor | Each pixel is folded into the fundamental triangle of the {7,3} tiling, with a drifting Möbius translation on top. | `architecture/Impossible.ts` |
+| Shepard tone | Eight octave-spaced sines under a fixed bell-shaped loudness envelope. Their phase follows log₃ of your zoom depth. | `systems/AudioSystem.ts` |
 
 ## Running it
 
@@ -82,10 +114,11 @@ run `npx playwright install chromium` first.
 
 | Input | Action |
 |---|---|
-| W A S D / arrow keys | Move |
+| W A S D / arrow keys | Move (in fractal worlds you fly where you look) |
 | Mouse | Look (click the view to capture the pointer) |
 | Shift | Sprint |
-| Space | Jump |
+| Space | Jump (fractal worlds: rise) |
+| C | Descend (fractal worlds) |
 | E | Interact, or step through a portal |
 | Esc | Pause and release the pointer |
 | F | Fullscreen |
@@ -147,13 +180,17 @@ Switching worlds disposes the previous one's GPU resources.
 | Environment map baked once per world from the sky shader | Believable reflections on glass and metal with no per-frame cost. |
 | Pixel ratio capped (1, 1.5 or 2) and MSAA off, ×2 or ×4 by preset; bloom off in Performance | The biggest levers for integrated GPUs. |
 | AABB collision on a uniform grid | Thousands of boxes are queried in microseconds. Stairs are rows of boxes, and you step up anything under 0.55 m. |
+| Ray-marched fractals at 70% resolution (85% on Cinematic), 72–150 march steps, shadow rays off on Performance | The fractal worlds are fragment-bound. Fewer pixels and steps are the main levers. Bands of detail smaller than a pixel are skipped, which also prevents shimmering. |
+| Recursive portal depth of 2, 3 or 5 levels | Each level is one more scene render, so only the self-containing painting uses recursion. |
 
 **Frame rate has not been measured on real GPUs.** The development environment
 only had software rendering (SwiftShader), where the heaviest worlds run at a few
 frames per second at 640×360, so no frame-rate claims are made here. The
 performance overlay (`` ` ``) shows your live frame rate, frame time, draw calls
 and renderer, so you can judge on your own hardware. If your machine struggles,
-use the **Performance** preset.
+use the **Performance** preset. The ray-marched worlds (the Infinite Regress,
+which is also the title screen, and the Recursive Machine) are the most
+demanding on the GPU.
 
 ## Browser compatibility
 
@@ -168,14 +205,15 @@ use the **Performance** preset.
 | What | How | Status |
 |---|---|---|
 | Type safety | `npm run typecheck` (strict TypeScript) | Passes |
-| Unit tests | `npm test`: 26 Vitest tests covering the RNG, settings validation and persistence, collision, player stair-climbing and wall-blocking and fall recovery, portal transforms (including roll), instanced batching, random-world determinism, cinematic easing and discovery persistence | Pass |
-| End-to-end | `npm run smoke`: 42 checks in headless Chromium covering menus, world selection, entering a world, movement, wall collision, pause and resume, mute persistence, rendered portals (chapel, looping stair, inverted arch with gravity roll, turned room), the E-activated window portal, a cross-world portal, fall recovery, cinematic toggle, photo mode PNG download, random-seed reproducibility, all five worlds loading, settings and discovery persistence after reload, and no page errors or failed requests | 42/42 passed on the dev server |
+| Unit tests | `npm test`: 30 Vitest tests covering the RNG, settings, collision, player movement and fall recovery, portal transforms (including roll), instanced batching, random-world determinism, cinematic easing, discoveries for every world, **exact self-similarity of the fractal across the rescale**, and the 4D lattice's permanent tunnels and slice-dependent walls | Pass |
+| End-to-end | `npm run smoke`: 52 checks in headless Chromium. They cover menus, world selection, entering the title world (flight), staying clear of the fractal, **flying across the rescale without reaching the centre**, corridor collision, pause and resume, mute, rendered portals (chapel, looping stair, inverted arch with roll, turned room), **the endless Penrose stair**, **walking into the self-containing painting**, **pushing the machine's 4D slice**, the window and cross-world portals, fall recovery, cinematic and photo modes (a real PNG download), seed reproducibility, all eight worlds loading, persistence after reload, and no page errors, failed requests or HTTP errors | 52/52 passed |
 | Production build | `npm run build` | Passes |
 | Sub-path hosting | The built `dist/` was served under `/liminal-worlds/` and loaded without errors | Passed locally |
 
-**Not verified:** performance on real GPUs, browsers other than Chromium, how the
-audio actually sounds (headless test runs have no speakers; the audio graph was
-only checked for errors), and the live GitHub Pages deployment (see below).
+**Not verified:** performance on real GPUs (especially for the ray-marched
+worlds), browsers other than Chromium, and how the audio, including the Shepard
+tone, actually sounds (headless test runs have no speakers; the audio graph was
+only checked for errors).
 
 ## Deploying to GitHub Pages
 
@@ -196,7 +234,9 @@ on every push and pull request.
 
 - Collision uses axis-aligned boxes. Rotated decorative elements (the parapets of diagonal stairs, the sculptures) don't collide, and the tower's round core collides as an inscribed square.
 - Gravity changes are presented through portal roll: the camera arrives tilted and rights itself. There's no continuous walking on walls or ceilings.
-- Portals don't render recursively. While a portal view is rendered, other portal surfaces are hidden, so a portal seen through another portal shows the space behind it.
+- Only the self-containing painting renders recursively. While any other portal view is rendered, other portal surfaces are hidden, so a portal seen through another portal shows the space behind it.
+- The fractal worlds are explored by flying; there's no walking on fractal surfaces. Discoveries there are triggered by distance travelled through the zoom or by reaching the core.
+- The impossible figures only work from their marked viewpoints, by design. From elsewhere you see the real (possible) object.
 - Portals between worlds use a fade-through transition, not a live view of the other world. Only one world is in memory at a time.
 - Random worlds have no portals or discoveries of their own.
 - Changing the graphics preset updates pixel ratio, MSAA, bloom and shadows straight away. Reflection resolution, particle count and cloud detail update when the next world loads.
@@ -205,7 +245,9 @@ on every push and pull request.
 ## Roadmap (not implemented)
 
 - Touch and gamepad navigation
-- Recursive portal rendering, and live views between worlds
+- Live portal views between worlds
+- Walkable fractal surfaces with surface-aligned gravity
+- More impossible figures (impossible trident, Escher's Belvedere, Reutersvärd cubes)
 - Continuous surface-aligned gravity in the Impossible House
 - More layout grammars and portal pairs in the random-world generator
 - Measured performance budgets on a range of integrated and discrete GPUs
